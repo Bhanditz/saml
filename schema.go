@@ -21,7 +21,7 @@ type AuthnRequest struct {
 	IssueInstant time.Time `xml:",attr"`
 	Destination  string    `xml:",attr"`
 	Consent      string    `xml:",attr"`
-	Issuer       *Issuer   `xml:"urn:oasis:names:tc:SAML:2.0:assertion Issuer"`
+	Issuer       *Issuer
 	Signature    *etree.Element
 
 	Subject      *Subject
@@ -43,7 +43,6 @@ type AuthnRequest struct {
 // Element returns an etree.Element representing the object in XML form.
 func (r *AuthnRequest) Element() *etree.Element {
 	el := etree.NewElement("samlp:AuthnRequest")
-	el.CreateAttr("xmlns:saml", "urn:oasis:names:tc:SAML:2.0:assertion")
 	el.CreateAttr("xmlns:samlp", "urn:oasis:names:tc:SAML:2.0:protocol")
 	el.CreateAttr("ID", r.ID)
 	el.CreateAttr("Version", r.Version)
@@ -55,7 +54,9 @@ func (r *AuthnRequest) Element() *etree.Element {
 		el.CreateAttr("Consent", r.Consent)
 	}
 	if r.Issuer != nil {
-		el.AddChild(r.Issuer.Element())
+		iel := r.Issuer.Element()
+		iel.CreateAttr("xmlns:saml", "urn:oasis:names:tc:SAML:2.0:assertion")
+		el.AddChild(iel)
 	}
 	if r.Signature != nil {
 		el.AddChild(r.Signature)

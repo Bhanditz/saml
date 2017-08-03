@@ -18,6 +18,7 @@ var HTTPRedirectBinding = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
 // See http://docs.oasis-open.org/security/saml/v2.0/saml-metadata-2.0-os.pdf §2.3.1
 type EntitiesDescriptor struct {
 	XMLName             xml.Name       `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntitiesDescriptor"`
+	XMLNS               string         `xml:"xmlns:ds,attr"`
 	ID                  *string        `xml:",attr,omitempty"`
 	ValidUntil          *time.Time     `xml:"validUntil,attr,omitempty"`
 	CacheDuration       *time.Duration `xml:"cacheDuration,attr,omitempty"`
@@ -41,9 +42,10 @@ var Metadata = struct{}{}
 // See http://docs.oasis-open.org/security/saml/v2.0/saml-metadata-2.0-os.pdf §2.3.2
 type EntityDescriptor struct {
 	XMLName                       xml.Name      `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntityDescriptor"`
+	XMLNS                         string        `xml:"xmlns:ds,attr"`
 	EntityID                      string        `xml:"entityID,attr"`
 	ID                            string        `xml:",attr,omitempty"`
-	ValidUntil                    time.Time     `xml:"validUntil,attr,omitempty"`
+	ValidUntil                    *time.Time    `xml:"validUntil,attr,omitempty"`
 	CacheDuration                 time.Duration `xml:"cacheDuration,attr,omitempty"`
 	Signature                     *etree.Element
 	RoleDescriptors               []RoleDescriptor               `xml:"RoleDescriptor"`
@@ -62,11 +64,9 @@ type EntityDescriptor struct {
 func (m EntityDescriptor) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	type Alias EntityDescriptor
 	aux := &struct {
-		ValidUntil    RelaxedTime `xml:"validUntil,attr,omitempty"`
-		CacheDuration Duration    `xml:"cacheDuration,attr,omitempty"`
+		CacheDuration Duration `xml:"cacheDuration,attr,omitempty"`
 		*Alias
 	}{
-		ValidUntil:    RelaxedTime(m.ValidUntil),
 		CacheDuration: Duration(m.CacheDuration),
 		Alias:         (*Alias)(&m),
 	}
@@ -77,8 +77,7 @@ func (m EntityDescriptor) MarshalXML(e *xml.Encoder, start xml.StartElement) err
 func (m *EntityDescriptor) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	type Alias EntityDescriptor
 	aux := &struct {
-		ValidUntil    RelaxedTime `xml:"validUntil,attr,omitempty"`
-		CacheDuration Duration    `xml:"cacheDuration,attr,omitempty"`
+		CacheDuration Duration `xml:"cacheDuration,attr,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(m),
@@ -86,7 +85,6 @@ func (m *EntityDescriptor) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 	if err := d.DecodeElement(aux, &start); err != nil {
 		return err
 	}
-	m.ValidUntil = time.Time(aux.ValidUntil)
 	m.CacheDuration = time.Duration(aux.CacheDuration)
 	return nil
 }
@@ -133,7 +131,6 @@ type ContactPerson struct {
 // See http://docs.oasis-open.org/security/saml/v2.0/saml-metadata-2.0-os.pdf §2.4.1
 type RoleDescriptor struct {
 	ID                         string        `xml:",attr,omitempty"`
-	ValidUntil                 time.Time     `xml:"validUntil,attr,omitempty"`
 	CacheDuration              time.Duration `xml:"cacheDuration,attr,omitempty"`
 	ProtocolSupportEnumeration string        `xml:"protocolSupportEnumeration,attr"`
 	ErrorURL                   string        `xml:"errorURL,attr,omitempty"`
@@ -146,7 +143,7 @@ type RoleDescriptor struct {
 // KeyDescriptor represents the XMLSEC object of the same name
 type KeyDescriptor struct {
 	Use               string             `xml:"use,attr"`
-	KeyInfo           KeyInfo            `xml:"http://www.w3.org/2000/09/xmldsig# KeyInfo"`
+	KeyInfo           KeyInfo            `xml:"KeyInfo"`
 	EncryptionMethods []EncryptionMethod `xml:"EncryptionMethod"`
 }
 
@@ -159,8 +156,8 @@ type EncryptionMethod struct {
 //
 // TODO(ross): revisit xmldsig and make this type more complete
 type KeyInfo struct {
-	XMLName     xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# KeyInfo"`
-	Certificate string   `xml:"X509Data>X509Certificate"`
+	XMLNS       string `xml:"xmlns:ds,attr"`
+	Certificate string `xml:"X509Data>X509Certificate"`
 }
 
 // Endpoint represents the SAML EndpointType object.
@@ -213,7 +210,6 @@ type IDPSSODescriptor struct {
 //
 // See http://docs.oasis-open.org/security/saml/v2.0/saml-metadata-2.0-os.pdf §2.4.2
 type SPSSODescriptor struct {
-	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:metadata SPSSODescriptor"`
 	SSODescriptor
 	AuthnRequestsSigned        *bool                       `xml:",attr"`
 	WantAssertionsSigned       *bool                       `xml:",attr"`
@@ -278,7 +274,7 @@ type AttributeAuthorityDescriptor struct {
 type AffiliationDescriptor struct {
 	AffiliationOwnerID string        `xml:"affiliationOwnerID,attr"`
 	ID                 string        `xml:",attr"`
-	ValidUntil         time.Time     `xml:"validUntil,attr,omitempty"`
+	ValidUntil         *time.Time    `xml:"validUntil,attr,omitempty"`
 	CacheDuration      time.Duration `xml:"cacheDuration,attr"`
 	Signature          *etree.Element
 	AffiliateMembers   []string        `xml:"AffiliateMember"`

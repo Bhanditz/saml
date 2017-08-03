@@ -62,6 +62,10 @@ type ServiceProvider struct {
 	// on this host, i.e. https://example.com/saml/acs
 	AcsURL url.URL
 
+	// LogoutURL is the full URL to the SAML logout service endpoint
+	// on this host, i.e. https://example.com/saml/logout
+	LogoutURL url.URL
+
 	// IDPMetadata is the metadata from the identity provider.
 	IDPMetadata *EntityDescriptor
 
@@ -72,6 +76,9 @@ type ServiceProvider struct {
 	// MetadataValidDuration is a duration used to calculate validUntil
 	// attribute in the metadata endpoint
 	MetadataValidDuration time.Duration
+
+	// EntityID - is a custom entity string for each saml provider.
+	EntityID string
 
 	// Logger is used to log messages for example in the event of errors
 	Logger logger.Interface
@@ -95,19 +102,17 @@ const DefaultCacheDuration = time.Hour * 24 * 1
 
 // Metadata returns the service provider metadata
 func (sp *ServiceProvider) Metadata() *EntityDescriptor {
-	validDuration := DefaultValidDuration
-	if sp.MetadataValidDuration > 0 {
-		validDuration = sp.MetadataValidDuration
+	entityID := sp.EntityID
+	if entityID == "" {
+		entityID = sp.MetadataURL.String()
 	}
 
-	authnRequestsSigned := false
 	wantAssertionsSigned := true
 	return &EntityDescriptor{
-		EntityID:   sp.MetadataURL.String(),
-		ValidUntil: TimeNow().Add(validDuration),
-
+		XMLNS:    "http://www.w3.org/2000/09/xmldsig#",
+		EntityID: entityID,
 		SPSSODescriptors: []SPSSODescriptor{
-			SPSSODescriptor{
+			{
 				SSODescriptor: SSODescriptor{
 					RoleDescriptor: RoleDescriptor{
 						ProtocolSupportEnumeration: "urn:oasis:names:tc:SAML:2.0:protocol",
@@ -115,15 +120,13 @@ func (sp *ServiceProvider) Metadata() *EntityDescriptor {
 							{
 								Use: "signing",
 								KeyInfo: KeyInfo{
-									Certificate: base64.StdEncoding.EncodeToString(sp.Certificate.Raw),
-								},
-							},
-							{
-								Use: "encryption",
-								KeyInfo: KeyInfo{
+									XMLNS:       "http://www.w3.org/2000/09/xmldsig#",
 									Certificate: base64.StdEncoding.EncodeToString(sp.Certificate.Raw),
 								},
 								EncryptionMethods: []EncryptionMethod{
+									{Algorithm: "http://www.w3.org/2009/xmlenc11#aes128-gcm"},
+									{Algorithm: "http://www.w3.org/2009/xmlenc11#aes192-gcm"},
+									{Algorithm: "http://www.w3.org/2009/xmlenc11#aes256-gcm"},
 									{Algorithm: "http://www.w3.org/2001/04/xmlenc#aes128-cbc"},
 									{Algorithm: "http://www.w3.org/2001/04/xmlenc#aes192-cbc"},
 									{Algorithm: "http://www.w3.org/2001/04/xmlenc#aes256-cbc"},
@@ -132,15 +135,19 @@ func (sp *ServiceProvider) Metadata() *EntityDescriptor {
 							},
 						},
 					},
+					SingleLogoutServices: []Endpoint{
+						{
+							Binding:  HTTPRedirectBinding,
+							Location: sp.LogoutURL.String(),
+						},
+					},
 				},
-				AuthnRequestsSigned:  &authnRequestsSigned,
 				WantAssertionsSigned: &wantAssertionsSigned,
-
 				AssertionConsumerServices: []IndexedEndpoint{
-					IndexedEndpoint{
+					{
 						Binding:  HTTPPostBinding,
 						Location: sp.AcsURL.String(),
-						Index:    1,
+						Index:    0,
 					},
 				},
 			},

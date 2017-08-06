@@ -19,9 +19,9 @@ import (
 
 	"crypto/x509"
 
-	"github.com/crewjam/saml"
-	"github.com/crewjam/saml/logger"
-	"github.com/crewjam/saml/testsaml"
+	"github.com/minio/saml"
+	"github.com/minio/saml/logger"
+	"github.com/minio/saml/testsaml"
 )
 
 // Hook up gocheck into the "go test" runner.

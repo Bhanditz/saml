@@ -18,9 +18,9 @@ import (
 	"os"
 
 	"github.com/beevik/etree"
-	"github.com/crewjam/saml/logger"
-	"github.com/crewjam/saml/testsaml"
-	"github.com/crewjam/saml/xmlenc"
+	"github.com/minio/saml/logger"
+	"github.com/minio/saml/testsaml"
+	"github.com/minio/saml/xmlenc"
 	"github.com/dgrijalva/jwt-go"
 	. "gopkg.in/check.v1"
 )
